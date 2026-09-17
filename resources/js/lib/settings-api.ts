@@ -1,5 +1,6 @@
 import { ensureCsrfCookie, http } from '@/lib/http';
 import type {
+    Passkey,
     PasswordConfirmationStatus,
     SecuritySettings,
     TwoFactorQrCode,
@@ -8,10 +9,15 @@ import type {
 type SecuritySettingsResponse = {
     data: {
         can_manage_two_factor: boolean;
+        can_manage_passkeys: boolean;
         two_factor_enabled: boolean;
         requires_confirmation: boolean;
         password_rules: string;
     };
+};
+
+type PasskeysResponse = {
+    data: Passkey[];
 };
 
 export async function updateProfileInformation(payload: {
@@ -65,10 +71,27 @@ export async function fetchSecuritySettings(options?: {
 
     return {
         canManageTwoFactor: data.can_manage_two_factor,
+        canManagePasskeys: data.can_manage_passkeys,
         twoFactorEnabled: data.two_factor_enabled,
         requiresConfirmation: data.requires_confirmation,
         passwordRules: data.password_rules,
     };
+}
+
+export async function fetchPasskeys(options?: {
+    signal?: AbortSignal;
+}): Promise<Passkey[]> {
+    const response = await http.get<PasskeysResponse>(
+        '/api/v1/settings/passkeys',
+        { signal: options?.signal },
+    );
+
+    return response.data.data;
+}
+
+export async function deletePasskey(id: number): Promise<void> {
+    await ensureCsrfCookie();
+    await http.delete(`/user/passkeys/${id}`);
 }
 
 export async function enableTwoFactor(): Promise<void> {

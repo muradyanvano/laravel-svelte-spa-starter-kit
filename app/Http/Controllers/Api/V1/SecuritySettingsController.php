@@ -20,6 +20,7 @@ class SecuritySettingsController extends Controller
         return response()->json([
             'data' => [
                 'can_manage_two_factor' => $canManageTwoFactor,
+                'can_manage_passkeys' => Features::canManagePasskeys(),
                 'two_factor_enabled' => $canManageTwoFactor
                     ? $request->user()->hasEnabledTwoFactorAuthentication()
                     : false,

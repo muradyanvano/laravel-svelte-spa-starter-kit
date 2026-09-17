@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Fortify\Features;
 
 test('serves the spa shell for the home route', function () {
     $response = $this->get('/');
@@ -61,6 +62,29 @@ test('does not swallow api routes with the spa fallback', function () {
 
     $response->assertUnauthorized();
     $response->assertJsonMissingPath('id');
+});
+
+test('does not swallow fortify passkey login options with the spa fallback', function () {
+    $this->skipUnlessFortifyHas(Features::passkeys());
+
+    $response = $this->getJson('/passkeys/login/options');
+
+    $response->assertOk();
+    $response->assertJsonStructure(['options']);
+    $response->assertDontSee('id="app"', false);
+});
+
+test('does not swallow fortify passkey registration options with the spa fallback', function () {
+    $this->skipUnlessFortifyHas(Features::passkeys());
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->getJson('/user/passkeys/options')
+        ->assertOk()
+        ->assertJsonStructure(['options'])
+        ->assertDontSee('id="app"', false);
 });
 
 test('does not swallow sanctum csrf cookie route', function () {

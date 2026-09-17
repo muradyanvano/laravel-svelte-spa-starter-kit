@@ -1,5 +1,6 @@
 <script lang="ts">
     import DocumentTitle from '@/components/DocumentTitle.svelte';
+    import PasskeyVerify from '@/components/PasskeyVerify.svelte';
     import InputError from '@/components/InputError.svelte';
     import PasswordInput from '@/components/PasswordInput.svelte';
     import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@
         fieldDescribedBy,
         fieldErrorId,
     } from '@/lib/form.svelte';
+    import { PASSKEY_CONFIRM_ROUTES } from '@/lib/passkeys';
     import {
         asSpaPath,
         getPostAuthPath,
@@ -32,6 +34,10 @@
         Boolean(form.formError) && !form.errors.password,
     );
 
+    async function handlePasskeyConfirmation(): Promise<void> {
+        await navigate(asSpaPath(intended));
+    }
+
     async function handleSubmit(event: SubmitEvent): Promise<void> {
         event.preventDefault();
 
@@ -52,6 +58,15 @@
     title="Confirm your password"
     description="This is a secure area of the application. Please confirm your password before continuing."
 >
+    <PasskeyVerify
+        routes={PASSKEY_CONFIRM_ROUTES}
+        label="Confirm with passkey"
+        loadingLabel="Confirming..."
+        separator="Or confirm with password"
+        testId="passkey-confirm-button"
+        onVerified={handlePasskeyConfirmation}
+    />
+
     <form class="flex flex-col gap-6" novalidate onsubmit={handleSubmit}>
         <div class="grid gap-6">
             {#if showFormError}

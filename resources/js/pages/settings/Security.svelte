@@ -3,6 +3,7 @@
     import DocumentTitle from '@/components/DocumentTitle.svelte';
     import Heading from '@/components/Heading.svelte';
     import InputError from '@/components/InputError.svelte';
+    import ManagePasskeys from '@/components/ManagePasskeys.svelte';
     import ManageTwoFactor from '@/components/ManageTwoFactor.svelte';
     import PasswordInput from '@/components/PasswordInput.svelte';
     import { Button } from '@/components/ui/button';
@@ -265,6 +266,10 @@
                 requiresConfirmation={securityState.requiresConfirmation}
                 twoFactorEnabled={securityState.twoFactorEnabled}
                 onUpdated={refreshSecurityState}
+            />
+
+            <ManagePasskeys
+                canManagePasskeys={securityState.canManagePasskeys}
             />
         {/if}
     </SettingsLayout>

@@ -171,7 +171,9 @@ return [
             'confirmPassword' => true,
             // 'window' => 0,
         ]),
-        // Passkeys: deferred to a later phase (official kit enables them; SPA UI not in Phase 1).
+        Features::passkeys([
+            'confirmPassword' => true,
+        ]),
     ],
 
 ];

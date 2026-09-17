@@ -1,5 +1,6 @@
 <script lang="ts">
     import DocumentTitle from '@/components/DocumentTitle.svelte';
+    import PasskeyVerify from '@/components/PasskeyVerify.svelte';
     import InputError from '@/components/InputError.svelte';
     import PasswordInput from '@/components/PasswordInput.svelte';
     import TextLink from '@/components/TextLink.svelte';
@@ -38,6 +39,18 @@
             !form.errors.email &&
             !form.errors.password,
     );
+
+    async function handlePasskeyLogin(): Promise<void> {
+        const user = await refreshUser();
+
+        if (user !== null && user.email_verified_at === null) {
+            await navigate('/verify-email');
+
+            return;
+        }
+
+        await navigate(asSpaPath(intended));
+    }
 
     async function handleSubmit(event: SubmitEvent): Promise<void> {
         event.preventDefault();
@@ -91,6 +104,11 @@
             {flashStatus}
         </div>
     {/if}
+
+    <PasskeyVerify
+        remember={() => form.data.remember}
+        onVerified={handlePasskeyLogin}
+    />
 
     <form class="flex flex-col gap-6" novalidate onsubmit={handleSubmit}>
         <div class="grid gap-6">

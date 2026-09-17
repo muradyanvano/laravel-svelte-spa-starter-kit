@@ -13,6 +13,7 @@
         "test:watch": "vp test --watch"
     },
     "dependencies": {
+        "@laravel/passkeys": "^0.4.0",
         "@lucide/svelte": "^1.35.0",
         "@sveltejs/vite-plugin-svelte": "^7.0.0",
         "axios": "^1.20.0",

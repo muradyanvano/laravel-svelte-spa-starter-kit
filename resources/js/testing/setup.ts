@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/svelte';
 import { afterEach, vi } from 'vitest';
+import '@/testing/passkeys-default-mock';
 
 afterEach(() => {
     cleanup();
