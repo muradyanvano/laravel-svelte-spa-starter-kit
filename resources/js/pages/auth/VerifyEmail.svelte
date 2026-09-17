@@ -1,45 +1,77 @@
-<script module lang="ts">
-    export const layout = {
-        title: 'Email verification',
-        description:
-            'Please verify your email address by clicking on the link we just emailed to you.',
-    };
-</script>
-
 <script lang="ts">
-    import { Form } from '@inertiajs/svelte';
-    import AppHead from '@/components/AppHead.svelte';
-    import TextLink from '@/components/TextLink.svelte';
+    import DocumentTitle from '@/components/DocumentTitle.svelte';
     import { Button } from '@/components/ui/button';
     import { Spinner } from '@/components/ui/spinner';
-    import { logout } from '@/routes';
-    import { send } from '@/routes/verification';
+    import { logout, useAuth } from '@/auth/auth.svelte';
+    import { resendVerificationEmail } from '@/lib/auth-api';
+    import { createForm } from '@/lib/form.svelte';
+    import AuthLayout from '@/layouts/AuthLayout.svelte';
+    import { navigate } from '@/router';
 
-    let {
-        status = '',
-    }: {
-        status?: string;
-    } = $props();
+    const auth = useAuth();
+    const form = createForm({});
+
+    $effect(() => {
+        if (auth.isVerified()) {
+            void navigate('/dashboard');
+        }
+    });
+
+    async function handleResend(): Promise<void> {
+        try {
+            await form.submit(() => resendVerificationEmail());
+        } catch {
+            // Validation and API errors are mapped by createForm.
+        }
+    }
+
+    async function handleLogout(): Promise<void> {
+        await logout();
+        await navigate('/login');
+    }
 </script>
 
-<AppHead title="Email verification" />
+<DocumentTitle title="Email verification" />
 
-{#if status === 'verification-link-sent'}
-    <div class="mb-4 text-center text-sm font-medium text-green-600">
-        A new verification link has been sent to the email address you provided
-        during registration.
-    </div>
-{/if}
+<AuthLayout
+    title="Verify your email"
+    description="Please verify your email address by clicking on the link we just emailed to you."
+>
+    {#if form.status === 'verification-link-sent'}
+        <div
+            class="mb-4 text-center text-sm font-medium text-green-600"
+            role="status"
+        >
+            A new verification link has been sent to the email address you
+            provided during registration.
+        </div>
+    {/if}
 
-<Form {...send.form()} class="space-y-6 text-center">
-    {#snippet children({ processing })}
-        <Button type="submit" disabled={processing} variant="secondary">
-            {#if processing}<Spinner />{/if}
+    <div class="flex flex-col gap-6">
+        {#if form.formError}
+            <p class="text-sm text-red-600 dark:text-red-500" role="alert">
+                {form.formError}
+            </p>
+        {/if}
+
+        <Button
+            type="button"
+            class="w-full"
+            disabled={form.processing}
+            onclick={handleResend}
+        >
+            {#if form.processing}
+                <Spinner class="size-4" />
+            {/if}
             Resend verification email
         </Button>
 
-        <TextLink href={logout()} as="button" class="mx-auto block text-sm">
+        <button
+            type="button"
+            class="text-foreground mx-auto text-sm underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current dark:decoration-neutral-500"
+            onclick={handleLogout}
+        >
             Log out
-        </TextLink>
-    {/snippet}
-</Form>
+        </button>
+    </div>
+</AuthLayout>

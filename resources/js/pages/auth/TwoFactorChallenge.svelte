@@ -1,6 +1,5 @@
 <script lang="ts">
-    import { Form, setLayoutProps } from '@inertiajs/svelte';
-    import AppHead from '@/components/AppHead.svelte';
+    import DocumentTitle from '@/components/DocumentTitle.svelte';
     import InputError from '@/components/InputError.svelte';
     import { Button } from '@/components/ui/button';
     import { Input } from '@/components/ui/input';
@@ -9,13 +8,33 @@
         InputOTPGroup,
         InputOTPSlot,
     } from '@/components/ui/input-otp';
-    import { store } from '@/routes/two-factor/login';
-    import type { TwoFactorConfigContent } from '@/types';
+    import { Label } from '@/components/ui/label';
+    import { Spinner } from '@/components/ui/spinner';
+    import { refreshUser } from '@/auth/auth.svelte';
+    import { submitTwoFactorChallenge } from '@/lib/auth-api';
+    import {
+        createForm,
+        fieldDescribedBy,
+        fieldErrorId,
+    } from '@/lib/form.svelte';
+    import {
+        asSpaPath,
+        getPostAuthPath,
+        historyStateFrom,
+    } from '@/lib/navigation';
+    import AuthLayout from '@/layouts/AuthLayout.svelte';
+    import { navigate } from '@/router';
 
     let showRecoveryInput = $state(false);
     let code = $state('');
 
-    const authConfigContent: TwoFactorConfigContent = $derived.by(() => {
+    const intended = getPostAuthPath(historyStateFrom(), '/dashboard');
+
+    const form = createForm({
+        recovery_code: '',
+    });
+
+    const authConfigContent = $derived.by(() => {
         if (showRecoveryInput) {
             return {
                 title: 'Recovery code',
@@ -33,92 +52,187 @@
         };
     });
 
-    $effect(() => {
-        setLayoutProps({
-            title: authConfigContent.title,
-            description: authConfigContent.description,
-        });
-    });
+    const showFormError = $derived(
+        Boolean(form.formError) &&
+            !form.errors.code &&
+            !form.errors.recovery_code,
+    );
 
-    function toggleRecoveryMode(clearErrors: () => void) {
+    async function completeChallenge(): Promise<void> {
+        const user = await refreshUser();
+
+        if (user !== null && user.email_verified_at === null) {
+            await navigate('/verify-email');
+
+            return;
+        }
+
+        await navigate(asSpaPath(intended));
+    }
+
+    async function handleOtpSubmit(event: SubmitEvent): Promise<void> {
+        event.preventDefault();
+
+        try {
+            await form.submit(async () => {
+                await submitTwoFactorChallenge({ code });
+            });
+
+            await completeChallenge();
+        } catch {
+            if (form.errors.code) {
+                code = '';
+            }
+        }
+    }
+
+    async function handleRecoverySubmit(event: SubmitEvent): Promise<void> {
+        event.preventDefault();
+
+        try {
+            await form.submit(async (data) => {
+                await submitTwoFactorChallenge({
+                    recovery_code: data.recovery_code,
+                });
+            });
+
+            await completeChallenge();
+        } catch {
+            // Validation and API errors are mapped by createForm.
+        }
+    }
+
+    function toggleRecoveryMode(): void {
         showRecoveryInput = !showRecoveryInput;
-        clearErrors();
+        form.clearErrors();
         code = '';
+        form.reset('recovery_code');
     }
 </script>
 
-<AppHead title="Two-factor authentication" />
+<DocumentTitle title="Two-factor authentication" />
 
-<div class="space-y-6">
+<AuthLayout
+    title={authConfigContent.title}
+    description={authConfigContent.description}
+>
     {#if !showRecoveryInput}
-        <Form
-            {...store.form()}
-            class="space-y-4"
-            resetOnError
-            onError={() => (code = '')}
-        >
-            {#snippet children({ errors, processing, clearErrors })}
-                <input type="hidden" name="code" value={code} />
-                <div
-                    class="flex flex-col items-center justify-center space-y-3 text-center"
-                >
-                    <div class="flex w-full items-center justify-center">
-                        <InputOTP
-                            id="otp"
-                            bind:value={code}
-                            maxlength={6}
-                            disabled={processing}
-                            autofocus
-                        >
-                            <InputOTPGroup>
-                                {#each { length: 6 } as _, i (i)}
-                                    <InputOTPSlot index={i} />
-                                {/each}
-                            </InputOTPGroup>
-                        </InputOTP>
-                    </div>
-                    <InputError message={errors.code} />
-                </div>
-                <Button type="submit" class="w-full" disabled={processing}
-                    >Continue</Button
-                >
-                <div class="text-center text-sm text-muted-foreground">
-                    <span>or you can </span>
-                    <button
-                        type="button"
-                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                        onclick={() => toggleRecoveryMode(clearErrors)}
+        <form class="flex flex-col gap-6" novalidate onsubmit={handleOtpSubmit}>
+            <div class="grid gap-6">
+                {#if showFormError}
+                    <p
+                        class="text-sm text-red-600 dark:text-red-500"
+                        role="alert"
                     >
-                        {authConfigContent.buttonText}
-                    </button>
+                        {form.formError}
+                    </p>
+                {/if}
+
+                <div class="grid gap-2">
+                    <Label for="code" class="sr-only">Authentication code</Label>
+                    <InputOTP
+                        id="code"
+                        maxlength={6}
+                        bind:value={code}
+                        disabled={form.processing}
+                        aria-invalid={Boolean(form.errors.code)}
+                        aria-describedby={fieldDescribedBy('code', form.errors)}
+                    >
+                        <InputOTPGroup>
+                            {#each { length: 6 } as _, index (index)}
+                                <InputOTPSlot {index} />
+                            {/each}
+                        </InputOTPGroup>
+                    </InputOTP>
+                    <InputError
+                        id={fieldErrorId('code')}
+                        message={form.errors.code}
+                    />
                 </div>
-            {/snippet}
-        </Form>
-    {:else}
-        <Form {...store.form()} class="space-y-4" resetOnError>
-            {#snippet children({ errors, processing, clearErrors })}
-                <Input
-                    name="recovery_code"
-                    type="text"
-                    placeholder="Enter recovery code"
-                    required
-                />
-                <InputError message={errors.recovery_code} />
-                <Button type="submit" class="w-full" disabled={processing}
-                    >Continue</Button
+
+                <Button
+                    type="submit"
+                    class="w-full"
+                    disabled={form.processing || code.length < 6}
                 >
+                    {#if form.processing}
+                        <Spinner class="size-4" />
+                    {/if}
+                    Continue
+                </Button>
 
                 <div class="text-center text-sm text-muted-foreground">
-                    <span>or you can </span>
-                    <button
+                    or you can
+                    <Button
                         type="button"
-                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                        onclick={() => toggleRecoveryMode(clearErrors)}
+                        variant="link"
+                        class="h-auto p-0 text-sm"
+                        onclick={toggleRecoveryMode}
                     >
                         {authConfigContent.buttonText}
-                    </button>
+                    </Button>
                 </div>
-            {/snippet}
-        </Form>
+            </div>
+        </form>
+    {:else}
+        <form
+            class="flex flex-col gap-6"
+            novalidate
+            onsubmit={handleRecoverySubmit}
+        >
+            <div class="grid gap-6">
+                {#if showFormError}
+                    <p
+                        class="text-sm text-red-600 dark:text-red-500"
+                        role="alert"
+                    >
+                        {form.formError}
+                    </p>
+                {/if}
+
+                <div class="grid gap-2">
+                    <Label for="recovery_code">Recovery code</Label>
+                    <Input
+                        id="recovery_code"
+                        bind:value={form.data.recovery_code}
+                        required
+                        autocomplete="one-time-code"
+                        disabled={form.processing}
+                        aria-invalid={Boolean(form.errors.recovery_code)}
+                        aria-describedby={fieldDescribedBy(
+                            'recovery_code',
+                            form.errors,
+                        )}
+                    />
+                    <InputError
+                        id={fieldErrorId('recovery_code')}
+                        message={form.errors.recovery_code}
+                    />
+                </div>
+
+                <Button
+                    type="submit"
+                    class="w-full"
+                    disabled={form.processing}
+                >
+                    {#if form.processing}
+                        <Spinner class="size-4" />
+                    {/if}
+                    Continue
+                </Button>
+
+                <div class="text-center text-sm text-muted-foreground">
+                    or you can
+                    <Button
+                        type="button"
+                        variant="link"
+                        class="h-auto p-0 text-sm"
+                        onclick={toggleRecoveryMode}
+                    >
+                        {authConfigContent.buttonText}
+                    </Button>
+                </div>
+            </div>
+        </form>
     {/if}
-</div>
+</AuthLayout>

@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { Link } from '@inertiajs/svelte';
     import {
         Breadcrumb,
         BreadcrumbItem,
@@ -19,16 +18,17 @@
 
 <Breadcrumb>
     <BreadcrumbList>
-        {#each breadcrumbs as item, index (item.href)}
+        <!-- Keyed by index: settings crumbs may repeat the same href. -->
+        {#each breadcrumbs as item, index (index)}
             <BreadcrumbItem>
                 {#if index === breadcrumbs.length - 1}
                     <BreadcrumbPage>{item.title}</BreadcrumbPage>
                 {:else}
                     <BreadcrumbLink asChild>
                         {#snippet children(props)}
-                            <Link href={item.href} class={props.class}>
+                            <a href={item.href} class={props.class}>
                                 {item.title}
-                            </Link>
+                            </a>
                         {/snippet}
                     </BreadcrumbLink>
                 {/if}

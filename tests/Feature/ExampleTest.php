@@ -1,7 +1,8 @@
 <?php
 
-test('returns a successful response', function () {
-    $response = $this->get(route('home'));
+test('spa home responds successfully', function () {
+    $response = $this->get('/');
 
     $response->assertOk();
+    $response->assertViewIs('app');
 });

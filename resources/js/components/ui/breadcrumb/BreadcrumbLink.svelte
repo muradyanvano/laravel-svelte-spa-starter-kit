@@ -2,13 +2,18 @@
     import type { Snippet } from 'svelte';
     import { cn } from '@/lib/utils';
 
+    type AsChildProps = {
+        class?: string;
+        [key: string]: unknown;
+    };
+
     let {
         children,
         asChild = false,
         class: className = '',
         ...rest
     }: {
-        children?: Snippet<[Record<string, unknown>]>;
+        children?: Snippet<[AsChildProps]>;
         asChild?: boolean;
         class?: string;
         [key: string]: unknown;

@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { Form } from '@inertiajs/svelte';
     import Check from '@lucide/svelte/icons/check';
     import Copy from '@lucide/svelte/icons/copy';
     import ScanLine from '@lucide/svelte/icons/scan-line';
@@ -19,26 +18,35 @@
         InputOTPSlot,
     } from '@/components/ui/input-otp';
     import { Spinner } from '@/components/ui/spinner';
+    import {
+        createForm,
+        fieldDescribedBy,
+        fieldErrorId,
+    } from '@/lib/form.svelte';
+    import { navigateToConfirmPasswordIfRequired } from '@/lib/navigation';
+    import { confirmTwoFactor } from '@/lib/settings-api';
     import { themeState } from '@/lib/theme.svelte';
     import { twoFactorAuthState } from '@/lib/twoFactorAuth.svelte';
-    import { confirm } from '@/routes/two-factor';
     import type { TwoFactorConfigContent } from '@/types';
 
     let {
         requiresConfirmation,
         twoFactorEnabled,
         isOpen = $bindable(false),
+        onConfirmed,
     }: {
         requiresConfirmation: boolean;
         twoFactorEnabled: boolean;
         isOpen?: boolean;
+        onConfirmed?: () => void | Promise<void>;
     } = $props();
 
     const { resolvedAppearance } = themeState();
     const twoFactorAuth = twoFactorAuthState();
 
+    const form = createForm({ code: '' });
+
     let showVerificationStep = $state(false);
-    let code = $state('');
     let copied = $state(false);
     let pinInputContainerRef = $state<HTMLDivElement>();
 
@@ -79,13 +87,13 @@
         return `data:image/svg+xml;utf8,${encodeURIComponent(qrCodeSvg)}`;
     });
 
-    async function copyToClipboard(text: string) {
+    async function copyToClipboard(text: string): Promise<void> {
         await navigator.clipboard.writeText(text);
         copied = true;
         setTimeout(() => (copied = false), 2000);
     }
 
-    async function handleModalNextStep() {
+    async function handleModalNextStep(): Promise<void> {
         if (requiresConfirmation) {
             showVerificationStep = true;
             await tick();
@@ -98,13 +106,41 @@
         isOpen = false;
     }
 
-    function resetModalState() {
+    async function handleConfirm(event: SubmitEvent): Promise<void> {
+        event.preventDefault();
+
+        try {
+            await form.submit(async (data) => {
+                await confirmTwoFactor({ code: data.code });
+            });
+        } catch (error) {
+            form.reset('code');
+
+            if (
+                await navigateToConfirmPasswordIfRequired(
+                    error,
+                    '/settings/security',
+                )
+            ) {
+                isOpen = false;
+            }
+
+            return;
+        }
+
+        twoFactorAuth.clearSetupData();
+        isOpen = false;
+        await onConfirmed?.();
+    }
+
+    function resetModalState(): void {
         if (twoFactorEnabled) {
             twoFactorAuth.clearSetupData();
         }
 
         showVerificationStep = false;
-        code = '';
+        form.reset('code');
+        form.clearErrors();
     }
 
     $effect(() => {
@@ -115,7 +151,7 @@
         }
 
         if (!twoFactorAuth.state.qrCodeSvg) {
-            twoFactorAuth.fetchSetupData();
+            void twoFactorAuth.fetchSetupData();
         }
     });
 </script>
@@ -130,14 +166,14 @@
                     class="relative overflow-hidden rounded-full border border-border bg-muted p-2.5"
                 >
                     <div class="absolute inset-0 grid grid-cols-5 opacity-50">
-                        {#each { length: 5 } as _, i (i)}
+                        {#each { length: 5 } as _, index (index)}
                             <div
                                 class="border-r border-border last:border-r-0"
                             ></div>
                         {/each}
                     </div>
                     <div class="absolute inset-0 grid grid-rows-5 opacity-50">
-                        {#each { length: 5 } as _, i (i)}
+                        {#each { length: 5 } as _, index (index)}
                             <div
                                 class="border-b border-border last:border-b-0"
                             ></div>
@@ -206,9 +242,9 @@
                         <div
                             class="absolute inset-0 top-1/2 h-px w-full bg-border"
                         ></div>
-                        <span class="relative bg-card px-2 py-1"
-                            >or, enter the code manually</span
-                        >
+                        <span class="relative bg-card px-2 py-1">
+                            or, enter the code manually
+                        </span>
                     </div>
 
                     <div
@@ -227,15 +263,18 @@
                                 <input
                                     type="text"
                                     readonly
+                                    aria-label="Setup key"
                                     value={twoFactorAuth.state.manualSetupKey}
                                     class="h-full w-full bg-background p-3 text-foreground"
                                 />
                                 <button
+                                    type="button"
                                     onclick={() =>
                                         copyToClipboard(
                                             twoFactorAuth.state
                                                 .manualSetupKey || '',
                                         )}
+                                    aria-label="Copy setup key"
                                     class="relative block h-auto border-l border-border px-3 hover:bg-muted"
                                 >
                                     {#if copied}
@@ -249,63 +288,67 @@
                     </div>
                 {/if}
             {:else}
-                <Form
-                    {...confirm.form()}
-                    resetOnError
-                    onFinish={() => (code = '')}
-                    onSuccess={() => (isOpen = false)}
-                >
-                    {#snippet children({ errors: formErrors, processing })}
-                        <input type="hidden" name="code" value={code} />
+                <form class="w-full" novalidate onsubmit={handleConfirm}>
+                    <div
+                        bind:this={pinInputContainerRef}
+                        class="relative w-full space-y-3"
+                    >
                         <div
-                            bind:this={pinInputContainerRef}
-                            class="relative w-full space-y-3"
+                            class="flex w-full flex-col items-center justify-center space-y-3 py-2"
                         >
-                            <div
-                                class="flex w-full flex-col items-center justify-center space-y-3 py-2"
-                            >
+                            <div class="grid gap-2">
                                 <InputOTP
                                     id="otp"
-                                    bind:value={code}
+                                    bind:value={form.data.code}
                                     maxlength={6}
-                                    disabled={processing}
-                                    autofocus
+                                    disabled={form.processing}
+                                    aria-label="Authentication code"
+                                    aria-invalid={Boolean(form.errors.code)}
+                                    aria-describedby={fieldDescribedBy(
+                                        'code',
+                                        form.errors,
+                                    )}
                                 >
                                     <InputOTPGroup>
-                                        {#each { length: 6 } as _, i (i)}
-                                            <InputOTPSlot index={i} />
+                                        {#each { length: 6 } as _, index (index)}
+                                            <InputOTPSlot {index} />
                                         {/each}
                                     </InputOTPGroup>
                                 </InputOTP>
                                 <InputError
-                                    message={formErrors?.[
-                                        'confirmTwoFactorAuthentication.code'
-                                    ]}
+                                    id={fieldErrorId('code')}
+                                    message={form.errors.code ??
+                                        form.errors[
+                                            'confirmTwoFactorAuthentication.code'
+                                        ]}
                                 />
                             </div>
-
-                            <div class="flex w-full items-center space-x-5">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    class="w-auto flex-1"
-                                    onclick={() =>
-                                        (showVerificationStep = false)}
-                                    disabled={processing}
-                                >
-                                    Back
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    class="w-auto flex-1"
-                                    disabled={processing || code.length < 6}
-                                >
-                                    Confirm
-                                </Button>
-                            </div>
                         </div>
-                    {/snippet}
-                </Form>
+
+                        <div class="flex w-full items-center space-x-5">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                class="w-auto flex-1"
+                                onclick={() => (showVerificationStep = false)}
+                                disabled={form.processing}
+                            >
+                                Back
+                            </Button>
+                            <Button
+                                type="submit"
+                                class="w-auto flex-1"
+                                disabled={form.processing ||
+                                    form.data.code.length < 6}
+                            >
+                                {#if form.processing}
+                                    <Spinner class="size-4" />
+                                {/if}
+                                Confirm
+                            </Button>
+                        </div>
+                    </div>
+                </form>
             {/if}
         </div>
     </DialogContent>

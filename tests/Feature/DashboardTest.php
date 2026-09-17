@@ -2,15 +2,18 @@
 
 use App\Models\User;
 
-test('guests are redirected to the login page', function () {
-    $response = $this->get(route('dashboard'));
-    $response->assertRedirect(route('login'));
+test('dashboard spa shell is available without server-side auth gate', function () {
+    // Client-side VerifiedRoute owns access; Laravel serves the shell for refreshes.
+    $this->get('/dashboard')
+        ->assertOk()
+        ->assertViewIs('app');
 });
 
-test('authenticated users can visit the dashboard', function () {
+test('authenticated users receive the dashboard spa shell', function () {
     $user = User::factory()->create();
-    $this->actingAs($user);
 
-    $response = $this->get(route('dashboard'));
-    $response->assertOk();
+    $this->actingAs($user)
+        ->get('/dashboard')
+        ->assertOk()
+        ->assertViewIs('app');
 });

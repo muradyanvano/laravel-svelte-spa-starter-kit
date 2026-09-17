@@ -28,6 +28,8 @@
 >
     {#each tabs as { value, Icon, label } (value)}
         <button
+            type="button"
+            aria-pressed={appearance.value === value}
             onclick={() => handleAppearanceChange(value)}
             class="flex items-center rounded-md px-3.5 py-1.5 transition-colors {appearance.value ===
             value

@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { Link } from '@inertiajs/svelte';
     import BookOpen from '@lucide/svelte/icons/book-open';
     import FolderGit2 from '@lucide/svelte/icons/folder-git-2';
     import LayoutGrid from '@lucide/svelte/icons/layout-grid';
@@ -16,9 +15,9 @@
         SidebarMenu,
         SidebarMenuButton,
         SidebarMenuItem,
+        useSidebar,
     } from '@/components/ui/sidebar';
-    import { toUrl } from '@/lib/utils';
-    import { dashboard } from '@/routes';
+    import { p } from '@/router';
     import type { NavItem } from '@/types';
 
     let {
@@ -27,10 +26,12 @@
         children?: Snippet;
     } = $props();
 
+    const { setOpenMobile } = useSidebar();
+
     const mainNavItems: NavItem[] = [
         {
             title: 'Dashboard',
-            href: dashboard(),
+            href: p('/dashboard'),
             icon: LayoutGrid,
         },
     ];
@@ -38,12 +39,12 @@
     const footerNavItems: NavItem[] = [
         {
             title: 'Repository',
-            href: 'https://github.com/laravel/svelte-starter-kit',
+            href: 'https://github.com/muradyanvano/laravel-svelte-spa-starter-kit',
             icon: FolderGit2,
         },
         {
             title: 'Documentation',
-            href: 'https://laravel.com/docs/starter-kits#svelte',
+            href: 'https://laravel.com/docs',
             icon: BookOpen,
         },
     ];
@@ -55,13 +56,14 @@
             <SidebarMenuItem>
                 <SidebarMenuButton size="lg" asChild>
                     {#snippet children(props)}
-                        <Link
+                        <a
                             {...props}
-                            href={toUrl(dashboard())}
+                            href={p('/dashboard')}
                             class={props.class}
+                            onclick={() => setOpenMobile(false)}
                         >
                             <AppLogo />
-                        </Link>
+                        </a>
                     {/snippet}
                 </SidebarMenuButton>
             </SidebarMenuItem>

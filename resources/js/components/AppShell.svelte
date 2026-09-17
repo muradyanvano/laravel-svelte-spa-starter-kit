@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { page } from '@inertiajs/svelte';
     import type { Snippet } from 'svelte';
     import { SidebarProvider } from '@/components/ui/sidebar';
     import type { AppVariant } from '@/types';
@@ -13,8 +12,6 @@
         class?: string;
         children?: Snippet;
     } = $props();
-
-    const isOpen = $derived(page.props.sidebarOpen);
 </script>
 
 {#if variant === 'header'}
@@ -22,7 +19,8 @@
         {@render children?.()}
     </div>
 {:else}
-    <SidebarProvider defaultOpen={isOpen}>
+    <!-- SidebarProvider restores the collapsed state from the `sidebar_state` cookie. -->
+    <SidebarProvider class={className}>
         {@render children?.()}
     </SidebarProvider>
 {/if}

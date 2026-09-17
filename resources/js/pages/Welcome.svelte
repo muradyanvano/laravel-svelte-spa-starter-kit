@@ -1,17 +1,17 @@
 <script lang="ts">
-    import { Link, page } from '@inertiajs/svelte';
-    import AppHead from '@/components/AppHead.svelte';
-    import { toUrl } from '@/lib/utils';
-    import { dashboard, login } from '@/routes';
-    import { register } from '@/routes';
+    import DocumentTitle from '@/components/DocumentTitle.svelte';
+    import { useAuth } from '@/auth/auth.svelte';
+    import { p } from '@/router';
 
-    const auth = $derived(page.props.auth);
+    const auth = useAuth();
 </script>
 
-<AppHead title="Welcome">
+<DocumentTitle title="Welcome" />
+
+<svelte:head>
     <link rel="preconnect" href="https://rsms.me/" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
-</AppHead>
+</svelte:head>
 
 <div
     class="flex min-h-screen flex-col items-center bg-[#FDFDFC] p-6 text-[#1b1b18] lg:justify-center lg:p-8 dark:bg-[#0a0a0a]"
@@ -20,26 +20,26 @@
         class="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-4xl"
     >
         <nav class="flex items-center justify-end gap-4">
-            {#if auth.user}
-                <Link
-                    href={toUrl(dashboard())}
-                    class="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+            {#if auth.isAuthenticated()}
+                <a
+                    href={p('/dashboard')}
+                    class="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b1b18] focus-visible:ring-offset-2 dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b] dark:focus-visible:ring-[#EDEDEC]"
                 >
                     Dashboard
-                </Link>
+                </a>
             {:else}
-                <Link
-                    href={toUrl(login())}
-                    class="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
+                <a
+                    href={p('/login')}
+                    class="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b1b18] focus-visible:ring-offset-2 dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A] dark:focus-visible:ring-[#EDEDEC]"
                 >
                     Log in
-                </Link>
-                <Link
-                    href={toUrl(register())}
-                    class="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                </a>
+                <a
+                    href={p('/register')}
+                    class="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1b1b18] focus-visible:ring-offset-2 dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b] dark:focus-visible:ring-[#EDEDEC]"
                 >
                     Register
-                </Link>
+                </a>
             {/if}
         </nav>
     </header>

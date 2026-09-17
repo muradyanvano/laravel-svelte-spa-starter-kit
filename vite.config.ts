@@ -1,4 +1,4 @@
-import inertia from '@inertiajs/vite';
+import { svelteTesting } from '@testing-library/svelte/vite';
 import { wayfinder } from '@laravel/vite-plugin-wayfinder';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
@@ -14,6 +14,16 @@ if (isSvelteCheck) {
     process.env.LARAVEL_BYPASS_ENV_CHECK ??= '1';
 }
 
+if (process.env.VITEST) {
+    process.env.LARAVEL_BYPASS_ENV_CHECK ??= '1';
+}
+
+function vitestNodeExecArgv(): string[] {
+    const major = Number(process.versions.node.split('.')[0]);
+
+    return major >= 25 ? ['--no-webstorage'] : [];
+}
+
 export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
@@ -25,13 +35,19 @@ export default defineConfig({
                 }),
             ],
         }),
-        inertia(),
         tailwindcss(),
         svelte(),
+        svelteTesting(),
         wayfinder({
             formVariants: true,
         }),
     ]),
+    test: {
+        environment: 'jsdom',
+        execArgv: vitestNodeExecArgv(),
+        setupFiles: ['resources/js/testing/setup.ts'],
+        include: ['resources/js/**/*.{test,spec}.{ts,svelte}'],
+    },
     server: {
         watch: {
             ignored: [

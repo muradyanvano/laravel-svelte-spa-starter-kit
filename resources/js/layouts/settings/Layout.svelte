@@ -1,14 +1,9 @@
 <script lang="ts">
-    import { Link } from '@inertiajs/svelte';
     import type { Snippet } from 'svelte';
     import Heading from '@/components/Heading.svelte';
     import { Button } from '@/components/ui/button';
     import { Separator } from '@/components/ui/separator';
-    import { currentUrlState } from '@/lib/currentUrl.svelte';
-    import { toUrl } from '@/lib/utils';
-    import { edit as editAppearance } from '@/routes/appearance';
-    import { edit as editProfile } from '@/routes/profile';
-    import { edit as editSecurity } from '@/routes/security';
+    import { p, route } from '@/router';
     import type { NavItem } from '@/types';
 
     let {
@@ -20,19 +15,17 @@
     const sidebarNavItems: NavItem[] = [
         {
             title: 'Profile',
-            href: editProfile(),
+            href: p('/settings/profile'),
         },
         {
             title: 'Security',
-            href: editSecurity(),
+            href: p('/settings/security'),
         },
         {
             title: 'Appearance',
-            href: editAppearance(),
+            href: p('/settings/appearance'),
         },
     ];
-
-    const url = currentUrlState();
 </script>
 
 <div class="px-4 py-6">
@@ -47,21 +40,25 @@
                 class="flex flex-col space-y-1 space-x-0"
                 aria-label="Settings"
             >
-                {#each sidebarNavItems as item (toUrl(item.href))}
+                {#each sidebarNavItems as item (item.href)}
                     <Button
                         variant="ghost"
-                        class="w-full justify-start {url.isCurrentUrl(
-                            item.href,
-                            url.currentUrl,
-                        )
+                        class="w-full justify-start {route.pathname ===
+                        item.href
                             ? 'bg-muted'
                             : ''}"
                         asChild
                     >
                         {#snippet children(props)}
-                            <Link href={toUrl(item.href)} class={props.class}>
+                            <a
+                                href={item.href}
+                                class={props.class}
+                                aria-current={route.pathname === item.href
+                                    ? 'page'
+                                    : undefined}
+                            >
                                 {item.title}
-                            </Link>
+                            </a>
                         {/snippet}
                     </Button>
                 {/each}
