@@ -1,10 +1,19 @@
 <script lang="ts">
+    import type { HTMLInputAttributes } from 'svelte/elements';
     import Eye from '@lucide/svelte/icons/eye';
     import EyeOff from '@lucide/svelte/icons/eye-off';
     import { Input } from '@/components/ui/input';
     import { cn } from '@/lib/utils';
 
-    let { class: className = '', ...rest } = $props();
+    let {
+        class: className = '',
+        value = $bindable(''),
+        ...rest
+    }: HTMLInputAttributes & {
+        value?: string;
+        /** Safari/iOS password generation hints (`Password::defaults()` rules string). */
+        passwordrules?: string;
+    } = $props();
 
     let showPassword = $state(false);
 </script>
@@ -12,6 +21,7 @@
 <div class="relative">
     <Input
         type={showPassword ? 'text' : 'password'}
+        bind:value
         class={cn('pr-10', className)}
         {...rest}
     />

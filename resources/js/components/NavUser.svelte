@@ -1,6 +1,8 @@
 <script lang="ts">
-    import { page } from '@inertiajs/svelte';
     import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+    import { useAuth } from '@/auth/auth.svelte';
+    import UserInfo from '@/components/UserInfo.svelte';
+    import UserMenuContent from '@/components/UserMenuContent.svelte';
     import {
         DropdownMenu,
         DropdownMenuContent,
@@ -12,14 +14,13 @@
         SidebarMenuItem,
         useSidebar,
     } from '@/components/ui/sidebar';
-    import UserInfo from '@/components/UserInfo.svelte';
-    import UserMenuContent from '@/components/UserMenuContent.svelte';
 
-    const user = $derived(page.props.auth.user);
+    const auth = useAuth();
     const { isMobile, state: sidebarState } = useSidebar();
 </script>
 
-{#if user}
+{#if auth.user}
+    {@const user = auth.user}
     <SidebarMenu>
         <SidebarMenuItem>
             <DropdownMenu class="w-full">

@@ -6,6 +6,8 @@
 *.md diff=markdown
 *.php diff=php
 
+# Changelog is repository maintenance metadata; generated apps do not need it.
 CHANGELOG.md export-ignore
-README.md export-ignore
+
+# Optional / not-yet-present workflow kept out of distributed archives.
 .github/workflows/browser-tests.yml export-ignore

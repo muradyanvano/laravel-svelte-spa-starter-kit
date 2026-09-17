@@ -1,10 +1,9 @@
 <script lang="ts">
-    import { Form } from '@inertiajs/svelte';
     import Eye from '@lucide/svelte/icons/eye';
     import EyeOff from '@lucide/svelte/icons/eye-off';
     import LockKeyhole from '@lucide/svelte/icons/lock-keyhole';
     import RefreshCw from '@lucide/svelte/icons/refresh-cw';
-    import { onMount, tick } from 'svelte';
+    import { tick } from 'svelte';
     import AlertError from '@/components/AlertError.svelte';
     import { Button } from '@/components/ui/button';
     import {
@@ -14,19 +13,33 @@
         CardHeader,
         CardTitle,
     } from '@/components/ui/card';
+    import { Spinner } from '@/components/ui/spinner';
     import { twoFactorAuthState } from '@/lib/twoFactorAuth.svelte';
-    import { regenerateRecoveryCodes } from '@/routes/two-factor';
 
     const twoFactorAuth = twoFactorAuthState();
+
     let isRecoveryCodesVisible = $state(false);
+    let isFetching = $state(false);
+    let isRegenerating = $state(false);
     let recoveryCodeSectionRef = $state<HTMLDivElement | undefined>();
 
-    async function toggleRecoveryCodesVisibility() {
+    /**
+     * Recovery codes are fetched only on an explicit "View" click, never on mount.
+     * Codes already held in memory are reused when the section is hidden and
+     * shown again; they are dropped when the 2FA management UI is destroyed.
+     */
+    async function toggleRecoveryCodesVisibility(): Promise<void> {
         if (
             !isRecoveryCodesVisible &&
             !twoFactorAuth.state.recoveryCodesList.length
         ) {
-            await twoFactorAuth.fetchRecoveryCodes();
+            isFetching = true;
+
+            try {
+                await twoFactorAuth.fetchRecoveryCodes();
+            } finally {
+                isFetching = false;
+            }
         }
 
         isRecoveryCodesVisible = !isRecoveryCodesVisible;
@@ -37,11 +50,15 @@
         }
     }
 
-    onMount(async () => {
-        if (!twoFactorAuth.state.recoveryCodesList.length) {
-            await twoFactorAuth.fetchRecoveryCodes();
+    async function handleRegenerate(): Promise<void> {
+        isRegenerating = true;
+
+        try {
+            await twoFactorAuth.regenerateRecoveryCodes();
+        } finally {
+            isRegenerating = false;
         }
-    });
+    }
 </script>
 
 <Card class="w-full">
@@ -58,8 +75,15 @@
         <div
             class="flex flex-col gap-3 select-none sm:flex-row sm:items-center sm:justify-between"
         >
-            <Button onclick={toggleRecoveryCodesVisibility} class="w-fit">
-                {#if isRecoveryCodesVisible}
+            <Button
+                onclick={toggleRecoveryCodesVisibility}
+                disabled={isFetching}
+                class="w-fit"
+                data-test="toggle-recovery-codes-button"
+            >
+                {#if isFetching}
+                    <Spinner class="size-4" />
+                {:else if isRecoveryCodesVisible}
                     <EyeOff class="size-4" />
                 {:else}
                     <Eye class="size-4" />
@@ -68,21 +92,19 @@
             </Button>
 
             {#if isRecoveryCodesVisible && twoFactorAuth.state.recoveryCodesList.length}
-                <Form
-                    {...regenerateRecoveryCodes.form()}
-                    options={{ preserveScroll: true }}
-                    onSuccess={() => twoFactorAuth.fetchRecoveryCodes()}
+                <Button
+                    variant="secondary"
+                    disabled={isRegenerating}
+                    onclick={handleRegenerate}
+                    data-test="regenerate-recovery-codes-button"
                 >
-                    {#snippet children({ processing })}
-                        <Button
-                            variant="secondary"
-                            type="submit"
-                            disabled={processing}
-                        >
-                            <RefreshCw class="size-4" /> Regenerate codes
-                        </Button>
-                    {/snippet}
-                </Form>
+                    {#if isRegenerating}
+                        <Spinner class="size-4" />
+                    {:else}
+                        <RefreshCw class="size-4" />
+                    {/if}
+                    Regenerate codes
+                </Button>
             {/if}
         </div>
         <div
@@ -102,7 +124,7 @@
                     >
                         {#if !twoFactorAuth.state.recoveryCodesList.length}
                             <div class="space-y-2">
-                                {#each { length: 8 } as _, n (n)}
+                                {#each { length: 8 } as _, index (index)}
                                     <div
                                         class="h-4 animate-pulse rounded bg-muted-foreground/20"
                                     ></div>

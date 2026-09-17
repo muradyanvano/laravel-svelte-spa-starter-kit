@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - develop
   pull_request:
 
 permissions:
@@ -11,6 +12,39 @@ permissions:
 
 jobs:
   ci:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '25']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Setup Application
+        run: composer setup
+
+      - name: Run CI Checks
+        run: composer ci:check
+
+  fresh-consumer:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,9 +64,75 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
+          cache: npm
 
-      - name: Setup Application
-        run: composer setup
+      - name: Export distributed source archive
+        run: |
+          mkdir -p /tmp/consumer
+          git archive HEAD | tar -x -C /tmp/consumer
+          cd /tmp/consumer
 
-      - name: Run CI Checks
-        run: composer ci:check
+      - name: Assert required documentation
+        working-directory: /tmp/consumer
+        run: |
+          test -f README.md
+          test -f LICENSE
+          test -f NOTICE.md
+          test -f SECURITY.md
+          test -f CONTRIBUTING.md
+
+      - name: Assert absent local or generated paths
+        working-directory: /tmp/consumer
+        run: |
+          test ! -f .env
+          test ! -f boost.json
+          test ! -d vendor
+          test ! -d node_modules
+          test ! -d resources/js/actions
+          test ! -d resources/js/routes
+          test ! -d resources/js/wayfinder
+
+      - name: Install PHP dependencies
+        working-directory: /tmp/consumer
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare application
+        working-directory: /tmp/consumer
+        run: |
+          cp .env.example .env
+          php artisan key:generate --no-interaction
+          php artisan migrate --force --no-interaction
+
+      - name: Install Node dependencies
+        working-directory: /tmp/consumer
+        run: npm ci
+
+      - name: Frontend type check
+        working-directory: /tmp/consumer
+        run: npm run types:check
+
+      - name: Frontend tests
+        working-directory: /tmp/consumer
+        env:
+          CI: true
+        run: npm run test
+
+      - name: Production build
+        working-directory: /tmp/consumer
+        run: npm run build
+
+      - name: Backend tests
+        working-directory: /tmp/consumer
+        run: php artisan test --compact
+
+      - name: Verify Wayfinder regenerated and remains gitignored
+        working-directory: /tmp/consumer
+        run: |
+          test -d resources/js/actions
+          test -d resources/js/routes
+          grep -q 'resources/js/actions' .gitignore
+          grep -q 'resources/js/routes' .gitignore
+
+      - name: Verify Composer post-update lifecycle without boost.json
+        working-directory: /tmp/consumer
+        run: composer run-script post-update-cmd --no-interaction

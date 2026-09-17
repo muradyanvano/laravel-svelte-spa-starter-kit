@@ -1,5 +1,9 @@
-import { useHttp } from '@inertiajs/svelte';
-import { qrCode, recoveryCodes, secretKey } from '@/routes/two-factor';
+import {
+    fetchRecoveryCodes as fetchRecoveryCodesRequest,
+    fetchTwoFactorQrCode,
+    fetchTwoFactorSecretKey,
+    regenerateRecoveryCodes as regenerateRecoveryCodesRequest,
+} from '@/lib/settings-api';
 
 type TwoFactorAuthState = {
     qrCodeSvg: string | null;
@@ -18,8 +22,14 @@ export type TwoFactorAuthStateApi = {
     fetchSetupKey: () => Promise<void>;
     fetchSetupData: () => Promise<void>;
     fetchRecoveryCodes: () => Promise<void>;
+    regenerateRecoveryCodes: () => Promise<void>;
 };
 
+/**
+ * Two-factor secrets, QR payloads, and recovery codes live in memory only.
+ * They are never persisted to browser storage and are cleared when the
+ * management UI is destroyed.
+ */
 const state = $state<TwoFactorAuthState>({
     qrCodeSvg: null,
     manualSetupKey: null,
@@ -30,74 +40,73 @@ const state = $state<TwoFactorAuthState>({
 const hasSetupData = (): boolean =>
     state.qrCodeSvg !== null && state.manualSetupKey !== null;
 
-export function twoFactorAuthState(): TwoFactorAuthStateApi {
-    const http = useHttp();
+const clearErrors = (): void => {
+    state.errors = [];
+};
 
-    const fetchQrCode = async (): Promise<void> => {
-        try {
-            const { svg } = (await http.submit(qrCode())) as {
-                svg: string;
-                url: string;
-            };
+const clearSetupData = (): void => {
+    state.manualSetupKey = null;
+    state.qrCodeSvg = null;
+    clearErrors();
+};
 
-            state.qrCodeSvg = svg;
-        } catch {
-            state.errors = [...state.errors, 'Failed to fetch QR code'];
-            state.qrCodeSvg = null;
-        }
-    };
+const clearTwoFactorAuthData = (): void => {
+    clearSetupData();
+    state.recoveryCodesList = [];
+    clearErrors();
+};
 
-    const fetchSetupKey = async (): Promise<void> => {
-        try {
-            const { secretKey: key } = (await http.submit(secretKey())) as {
-                secretKey: string;
-            };
+const fetchQrCode = async (): Promise<void> => {
+    try {
+        const { svg } = await fetchTwoFactorQrCode();
 
-            state.manualSetupKey = key;
-        } catch {
-            state.errors = [...state.errors, 'Failed to fetch a setup key'];
-            state.manualSetupKey = null;
-        }
-    };
-
-    const clearErrors = (): void => {
-        state.errors = [];
-    };
-
-    const clearSetupData = (): void => {
-        state.manualSetupKey = null;
+        state.qrCodeSvg = svg;
+    } catch {
+        state.errors = [...state.errors, 'Failed to fetch QR code'];
         state.qrCodeSvg = null;
-        clearErrors();
-    };
+    }
+};
 
-    const clearTwoFactorAuthData = (): void => {
-        clearSetupData();
+const fetchSetupKey = async (): Promise<void> => {
+    try {
+        const { secretKey } = await fetchTwoFactorSecretKey();
+
+        state.manualSetupKey = secretKey;
+    } catch {
+        state.errors = [...state.errors, 'Failed to fetch a setup key'];
+        state.manualSetupKey = null;
+    }
+};
+
+const fetchSetupData = async (): Promise<void> => {
+    clearErrors();
+    await Promise.all([fetchQrCode(), fetchSetupKey()]);
+};
+
+const fetchRecoveryCodes = async (): Promise<void> => {
+    try {
+        clearErrors();
+        state.recoveryCodesList = await fetchRecoveryCodesRequest();
+    } catch {
+        state.errors = [...state.errors, 'Failed to fetch recovery codes'];
         state.recoveryCodesList = [];
+    }
+};
+
+const regenerateRecoveryCodes = async (): Promise<void> => {
+    try {
         clearErrors();
-    };
+        await regenerateRecoveryCodesRequest();
+    } catch {
+        state.errors = [...state.errors, 'Failed to regenerate recovery codes'];
 
-    const fetchRecoveryCodes = async (): Promise<void> => {
-        try {
-            clearErrors();
-            state.recoveryCodesList = (await http.submit(
-                recoveryCodes(),
-            )) as string[];
-        } catch {
-            state.errors = [...state.errors, 'Failed to fetch recovery codes'];
-            state.recoveryCodesList = [];
-        }
-    };
+        return;
+    }
 
-    const fetchSetupData = async (): Promise<void> => {
-        try {
-            clearErrors();
-            await Promise.all([fetchQrCode(), fetchSetupKey()]);
-        } catch {
-            state.qrCodeSvg = null;
-            state.manualSetupKey = null;
-        }
-    };
+    await fetchRecoveryCodes();
+};
 
+export function twoFactorAuthState(): TwoFactorAuthStateApi {
     return {
         state,
         hasSetupData,
@@ -108,5 +117,6 @@ export function twoFactorAuthState(): TwoFactorAuthStateApi {
         fetchSetupKey,
         fetchSetupData,
         fetchRecoveryCodes,
+        regenerateRecoveryCodes,
     };
 }

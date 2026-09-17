@@ -1,17 +1,15 @@
 <script lang="ts">
-    import { Link, router } from '@inertiajs/svelte';
     import LogOut from '@lucide/svelte/icons/log-out';
     import Settings from '@lucide/svelte/icons/settings';
+    import { logout } from '@/auth/auth.svelte';
+    import UserInfo from '@/components/UserInfo.svelte';
     import {
         DropdownMenuGroup,
         DropdownMenuItem,
         DropdownMenuLabel,
         DropdownMenuSeparator,
     } from '@/components/ui/dropdown-menu';
-    import UserInfo from '@/components/UserInfo.svelte';
-    import { toUrl } from '@/lib/utils';
-    import { logout } from '@/routes';
-    import { edit } from '@/routes/profile';
+    import { navigate, p } from '@/router';
     import type { User } from '@/types';
 
     let {
@@ -20,11 +18,11 @@
         user: User;
     } = $props();
 
-    function handleLogout(propsOnClick?: () => void) {
-        return () => {
-            propsOnClick?.();
-            router.flushAll();
-        };
+    /** `logout()` clears auth state — never refetch the current user afterwards. */
+    async function handleLogout(closeMenu?: () => void): Promise<void> {
+        closeMenu?.();
+        await logout();
+        await navigate('/', { replace: true });
     }
 </script>
 
@@ -37,30 +35,28 @@
 <DropdownMenuGroup>
     <DropdownMenuItem asChild>
         {#snippet children(props)}
-            <Link
+            <a
                 class={props.class}
-                href={toUrl(edit())}
-                prefetch
+                href={p('/settings/profile')}
                 onclick={props.onClick}
             >
                 <Settings class="mr-2 h-4 w-4" />
                 Settings
-            </Link>
+            </a>
         {/snippet}
     </DropdownMenuItem>
 </DropdownMenuGroup>
 <DropdownMenuSeparator />
 <DropdownMenuItem asChild>
     {#snippet children(props)}
-        <Link
+        <button
+            type="button"
             class={props.class}
-            href={logout()}
-            as="button"
-            onclick={handleLogout(props.onClick)}
+            onclick={() => handleLogout(props.onClick)}
             data-test="logout-button"
         >
             <LogOut class="mr-2 h-4 w-4" />
             Log out
-        </Link>
+        </button>
     {/snippet}
 </DropdownMenuItem>

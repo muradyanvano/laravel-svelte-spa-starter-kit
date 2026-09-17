@@ -52,7 +52,7 @@ class UserFactory extends Factory
     public function withTwoFactor(): static
     {
         return $this->state(fn (array $attributes) => [
-            'two_factor_secret' => encrypt('secret'),
+            'two_factor_secret' => encrypt('25QSM6S2H4RCYELBFJHAVCTC3SXNORUC'),
             'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
             'two_factor_confirmed_at' => now(),
         ]);

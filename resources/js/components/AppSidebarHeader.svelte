@@ -15,7 +15,7 @@
 >
     <div class="flex items-center gap-2">
         <SidebarTrigger class="-ml-1" />
-        {#if breadcrumbs && breadcrumbs.length > 0}
+        {#if breadcrumbs.length > 0}
             <Breadcrumbs {breadcrumbs} />
         {/if}
     </div>
