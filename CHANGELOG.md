@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-17
+
 ### Added
 
 - Passkey sign-in on the login page (`Sign in with a passkey`).
@@ -30,5 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Laravel Wayfinder integration for typed route helpers.
 - Quality tooling: Pest, Vitest, PHPStan (Larastan), Pint, svelte-check, and `composer ci:check`.
 
-[Unreleased]: https://github.com/muradyanvano/laravel-svelte-spa-starter-kit/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/muradyanvano/laravel-svelte-spa-starter-kit/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/muradyanvano/laravel-svelte-spa-starter-kit/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/muradyanvano/laravel-svelte-spa-starter-kit/releases/tag/v1.0.0

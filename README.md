@@ -62,21 +62,21 @@ Or with Composer:
 composer create-project muradyanvano/laravel-svelte-spa-starter-kit my-app
 ```
 
-Both commands resolve the package from Packagist. The latest stable release is
-**v1.0.0**; an unpinned install uses the current stable version. Passkey support
-ships in the upcoming **v1.1.0** release (see [Unreleased] in
-[CHANGELOG.md](CHANGELOG.md)).
+Both commands resolve the package from Packagist and install the latest stable
+release.
 
-**Install a specific version** (for example, to stay on v1.0.0):
+**Install a specific version** (for example, to stay on v1.0.0 without
+passkeys):
 
 ```bash
 composer create-project muradyanvano/laravel-svelte-spa-starter-kit my-app v1.0.0
 ```
 
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
 ### Clone from GitHub
 
-To work from source or preview unreleased changes (including passkeys on
-`develop`):
+To contribute or work from source:
 
 ```bash
 git clone https://github.com/muradyanvano/laravel-svelte-spa-starter-kit.git my-app
@@ -119,8 +119,9 @@ composer run dev
 - Logout
 
 Passkeys use the official [`@laravel/passkeys`](https://www.npmjs.com/package/@laravel/passkeys)
-frontend package with native Fortify WebAuthn endpoints. WebAuthn support depends on
-the browser and platform (for example Windows Hello, Touch ID, or a security key).
+frontend package with native Fortify WebAuthn endpoints. Passkey authentication and
+management are available starting with **v1.1.0**. WebAuthn support depends on the
+browser and platform (for example Windows Hello, Touch ID, or a security key).
 Passkey credentials are verified by the server; they are not stored in browser
 `localStorage` or `sessionStorage`.
 
