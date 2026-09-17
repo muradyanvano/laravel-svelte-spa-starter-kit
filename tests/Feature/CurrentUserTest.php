@@ -40,6 +40,9 @@ test('current user resource does not expose sensitive attributes', function () {
     $response->assertJsonMissingPath('data.remember_token');
     $response->assertJsonMissingPath('data.two_factor_secret');
     $response->assertJsonMissingPath('data.two_factor_recovery_codes');
+    $response->assertJsonMissingPath('data.passkeys');
+    $response->assertJsonMissingPath('data.credential');
+    $response->assertJsonMissingPath('data.credential_id');
     expect($response->json('data'))->not->toHaveKey('password');
     expect($response->json())->not->toHaveKey('password');
 });

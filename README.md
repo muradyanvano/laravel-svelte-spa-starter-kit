@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/github/license/muradyanvano/laravel-svelte-spa-starter-kit)](LICENSE)
 
 <p align="center">
-    <img src=".github/assets/social-preview.png" alt="Laravel Vue SPA Starter Kit" width="100%">
+    <img src=".github/assets/social-preview.png" alt="Laravel Svelte SPA Starter Kit" width="100%">
 </p>
 
 A community Laravel starter kit with **official-style UI** and a **true Svelte
@@ -48,23 +48,35 @@ You get:
 
 ## Quick start
 
+Install the latest stable release from
+[Packagist](https://packagist.org/packages/muradyanvano/laravel-svelte-spa-starter-kit)
+using the Laravel Installer:
+
 ```bash
 laravel new my-app --using=muradyanvano/laravel-svelte-spa-starter-kit
 ```
 
-The Laravel Installer resolves the package from Packagist; it does not
-automatically pin `v1.0.0` unless you specify a version constraint separately.
+Or with Composer:
 
-Pinned Composer install
+```bash
+composer create-project muradyanvano/laravel-svelte-spa-starter-kit my-app
+```
+
+Both commands resolve the package from Packagist. The latest stable release is
+**v1.0.0**; an unpinned install uses the current stable version. Passkey support
+ships in the upcoming **v1.1.0** release (see [Unreleased] in
+[CHANGELOG.md](CHANGELOG.md)).
+
+**Install a specific version** (for example, to stay on v1.0.0):
 
 ```bash
 composer create-project muradyanvano/laravel-svelte-spa-starter-kit my-app v1.0.0
 ```
 
-> These commands are **not** available until the first Packagist release. Until
-> then, clone from GitHub (below).
+### Clone from GitHub
 
-### Clone from GitHub (available now)
+To work from source or preview unreleased changes (including passkeys on
+`develop`):
 
 ```bash
 git clone https://github.com/muradyanvano/laravel-svelte-spa-starter-kit.git my-app
@@ -94,17 +106,23 @@ composer run dev
 
 ### Authentication
 
-- Login
+- Login (email/password and passkey)
 - Registration
 - Password reset
 - Email verification
-- Password confirmation
-- Two-factor challenge (login)
+- Password confirmation (password or passkey)
+- Passkey sign-in (`Sign in with a passkey`)
+- Passkey management under Security (list, register, delete)
+- Two-factor challenge (password login only)
 - Two-factor setup and management (TOTP)
 - Recovery codes (lazy-loaded on explicit view)
 - Logout
 
-Passkeys / WebAuthn are **not** implemented in the SPA UI at this time.
+Passkeys use the official [`@laravel/passkeys`](https://www.npmjs.com/package/@laravel/passkeys)
+frontend package with native Fortify WebAuthn endpoints. WebAuthn support depends on
+the browser and platform (for example Windows Hello, Touch ID, or a security key).
+Passkey credentials are verified by the server; they are not stored in browser
+`localStorage` or `sessionStorage`.
 
 ### Application
 
@@ -114,7 +132,7 @@ Passkeys / WebAuthn are **not** implemented in the SPA UI at this time.
 - Mobile navigation
 - Dashboard
 - Profile settings (name, email, account deletion)
-- Security settings (password, two-factor authentication)
+- Security settings (password, two-factor authentication, passkeys)
 - Appearance settings (Light / Dark / System)
 - UI built with Tailwind CSS 4 and bits-ui primitives
 - Accessible form patterns (`aria-*`, error associations)
@@ -148,15 +166,15 @@ Browser
               +-- /api/v1/* JSON APIs
 ```
 
-| Layer         | Responsibility                                                 |
-| ------------- | -------------------------------------------------------------- |
-| **Laravel**   | Sessions, APIs, validation, authorization, persistence         |
-| **Svelte**    | Client routing, layouts, UI, forms, auth state consumption     |
-| **Fortify**   | Headless login, register, reset, verify, 2FA, profile/password |
-| **Sanctum**   | First-party SPA cookie/session authentication                  |
-| **sv-router** | Client-side routing and navigation guards                      |
-| **Axios**     | HTTP client, CSRF cookie, error normalization                  |
-| **Wayfinder** | Generated TypeScript helpers for Laravel routes/actions        |
+| Layer         | Responsibility                                                           |
+| ------------- | ------------------------------------------------------------------------ |
+| **Laravel**   | Sessions, APIs, validation, authorization, persistence                   |
+| **Svelte**    | Client routing, layouts, UI, forms, auth state consumption               |
+| **Fortify**   | Headless login, register, reset, verify, 2FA, passkeys, profile/password |
+| **Sanctum**   | First-party SPA cookie/session authentication                            |
+| **sv-router** | Client-side routing and navigation guards                                |
+| **Axios**     | HTTP client, CSRF cookie, error normalization                            |
+| **Wayfinder** | Generated TypeScript helpers for Laravel routes/actions                  |
 
 Hard refreshes on frontend routes are served by Laravel (`SpaController`);
 in-app navigation is handled entirely by sv-router.
@@ -172,6 +190,13 @@ in-app navigation is handled entirely by sv-router.
 - Password confirmation for sensitive settings
 - Two-factor authentication with TOTP; recovery codes fetched only when the user
   clicks **View recovery codes**
+- **Passkeys** via Fortify and `@laravel/passkeys`: sign-in, password confirmation,
+  and Security settings management. WebAuthn ceremonies are owned by the official
+  passkeys package; Axios owns ordinary SPA APIs and Fortify mutations.
+- **Passkey login and 2FA:** when two-factor authentication is enabled, native
+  Fortify passkey login authenticates the session directly (the same behavior as
+  Laravel's official starter kits). Password login still routes through the
+  two-factor challenge when required.
 
 **Consumer responsibility:** You are responsible for HTTPS, production cookie
 settings, `SANCTUM_STATEFUL_DOMAINS`, CORS, secrets, mail configuration,

@@ -5,6 +5,7 @@ use Laravel\Fortify\Features;
 
 beforeEach(function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+    $this->skipUnlessFortifyHas(Features::passkeys());
 });
 
 test('guests cannot access the security settings endpoint', function () {
@@ -18,11 +19,13 @@ test('authenticated users receive non-sensitive security settings state', functi
         ->getJson('/api/v1/settings/security')
         ->assertOk()
         ->assertJsonPath('data.can_manage_two_factor', true)
+        ->assertJsonPath('data.can_manage_passkeys', true)
         ->assertJsonPath('data.two_factor_enabled', false)
         ->assertJsonPath('data.requires_confirmation', true)
         ->assertJsonStructure([
             'data' => [
                 'can_manage_two_factor',
+                'can_manage_passkeys',
                 'two_factor_enabled',
                 'requires_confirmation',
                 'password_rules',
@@ -30,7 +33,8 @@ test('authenticated users receive non-sensitive security settings state', functi
         ])
         ->assertJsonMissingPath('data.two_factor_secret')
         ->assertJsonMissingPath('data.recovery_codes')
-        ->assertJsonMissingPath('data.qr_code');
+        ->assertJsonMissingPath('data.qr_code')
+        ->assertJsonMissingPath('data.passkeys');
 });
 
 test('security settings reports enabled two-factor authentication', function () {

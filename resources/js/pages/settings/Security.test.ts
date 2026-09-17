@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { Navigation } from 'sv-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetAuthStateForTesting } from '@/auth/auth.svelte';
+import { fetchCurrentUser } from '@/lib/auth-api';
 import {
+    fetchPasskeys,
     fetchPasswordConfirmationStatus,
     fetchRecoveryCodes,
     fetchSecuritySettings,
@@ -20,6 +22,8 @@ vi.mock('@/lib/auth-api', () => ({
 vi.mock('@/lib/settings-api', () => ({
     fetchPasswordConfirmationStatus: vi.fn(),
     fetchSecuritySettings: vi.fn(),
+    fetchPasskeys: vi.fn(),
+    deletePasskey: vi.fn(),
     updatePassword: vi.fn(),
     enableTwoFactor: vi.fn(),
     disableTwoFactor: vi.fn(),
@@ -45,6 +49,7 @@ const verifiedUser = {
 
 const securitySettings = {
     canManageTwoFactor: true,
+    canManagePasskeys: true,
     twoFactorEnabled: true,
     requiresConfirmation: true,
     passwordRules: 'minlength: 8;',
@@ -59,8 +64,10 @@ describe('Security settings', () => {
         vi.mocked(fetchPasswordConfirmationStatus).mockReset();
         vi.mocked(fetchSecuritySettings).mockReset();
         vi.mocked(fetchRecoveryCodes).mockReset();
+        vi.mocked(fetchPasskeys).mockReset();
         vi.mocked(regenerateRecoveryCodes).mockReset();
         vi.mocked(navigate).mockClear();
+        vi.mocked(fetchPasskeys).mockResolvedValue([]);
     });
 
     it('loads security state once and never fetches recovery codes on mount', async () => {
@@ -80,7 +87,30 @@ describe('Security settings', () => {
         expect(fetchPasswordConfirmationStatus).toHaveBeenCalledTimes(1);
         expect(fetchSecuritySettings).toHaveBeenCalledTimes(1);
         expect(fetchRecoveryCodes).not.toHaveBeenCalled();
+        expect(fetchPasskeys).toHaveBeenCalledTimes(1);
+        expect(fetchCurrentUser).not.toHaveBeenCalled();
         expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('does not fetch passkeys when management is disabled', async () => {
+        vi.mocked(fetchPasswordConfirmationStatus).mockResolvedValue({
+            confirmed: true,
+        });
+        vi.mocked(fetchSecuritySettings).mockResolvedValue({
+            ...securitySettings,
+            canManagePasskeys: false,
+        });
+
+        render(Security);
+
+        await vi.waitFor(() =>
+            expect(
+                screen.getByRole('heading', { name: 'Update password' }),
+            ).toBeInTheDocument(),
+        );
+
+        expect(fetchPasskeys).not.toHaveBeenCalled();
+        expect(screen.queryByTestId('manage-passkeys')).not.toBeInTheDocument();
     });
 
     it('redirects to password confirmation when the password is unconfirmed', async () => {
@@ -97,6 +127,7 @@ describe('Security settings', () => {
             }),
         );
         expect(fetchSecuritySettings).not.toHaveBeenCalled();
+        expect(fetchPasskeys).not.toHaveBeenCalled();
     });
 
     it('keeps the skeleton visible until confirm-password navigation completes', async () => {
@@ -134,6 +165,8 @@ describe('Security settings', () => {
             screen.queryByRole('heading', { name: 'Update password' }),
         ).not.toBeInTheDocument();
         expect(fetchSecuritySettings).not.toHaveBeenCalled();
+        expect(fetchPasskeys).not.toHaveBeenCalled();
+        expect(screen.queryByTestId('manage-passkeys')).not.toBeInTheDocument();
     });
 
     it('fetches recovery codes only when they are explicitly viewed', async () => {
